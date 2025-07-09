@@ -263,59 +263,62 @@ if form_submit:
 
 # ✅ Correctly defined outside of if-block and at top-level indentation
 def generate_ticket(name, seats, amount, uid, txn_id):
-    ticket = Image.new("RGB", (1400, 700), "#ffffff")
+    ticket = Image.new("RGB", (1400, 700), "#1a1a1a")
     draw = ImageDraw.Draw(ticket)
 
     try:
-        font_title = ImageFont.truetype("arialbd.ttf", 60)
-        font_text = ImageFont.truetype("arial.ttf", 40)
-        font_small = ImageFont.truetype("arial.ttf", 30)
+        font_title = ImageFont.truetype("arialbd.ttf", 64)
+        font_text = ImageFont.truetype("arial.ttf", 36)
+        font_small = ImageFont.truetype("arial.ttf", 28)
     except:
         font_title = ImageFont.load_default()
         font_text = ImageFont.load_default()
         font_small = ImageFont.load_default()
 
-    # Background gradient
-    for y in range(700):
-        r = 30 + (y / 700) * 20
-        g = 30
-        b = 40
-        draw.line((0, y, 1400, y), fill=(int(r), int(g), int(b)))
+    # Top Banner
+    draw.rectangle([0, 0, 1400, 100], fill="#ffcc00")
+    draw.text((50, 20), "🎬 DAARUNAM MOVIE TICKET", font=font_title, fill="#000000")
 
-    # Perforated edges
+    # Perforated edges (rounded border-like dots)
     for x in [50, 1350]:
-        for y in range(50, 650, 10):
-            draw.ellipse((x-5, y-5, x+5, y+5), fill="#888888")
-    for y in [50, 650]:
-        for x in range(50, 1350, 10):
-            draw.ellipse((x-5, y-5, x+5, y+5), fill="#888888")
+        for y in range(120, 680, 14):
+            draw.ellipse((x-4, y-4, x+4, y+4), fill="#666666")
+    for y in [120, 680]:
+        for x in range(50, 1350, 18):
+            draw.ellipse((x-4, y-4, x+4, y+4), fill="#666666")
 
-    # Header
-    draw.rectangle([50, 50, 1350, 150], fill="#ffcc00")
-    draw.text((60, 60), "🎬 DAARUNAM MOVIE TICKET", font=font_title, fill="#1a1a1a")
-
-    # Poster
-    x = 400
+    # Poster on left
     if os.path.exists("poster.jpg"):
         poster = Image.open("poster.jpg").resize((300, 400))
-        ticket.paste(poster, (60, 180))
+        ticket.paste(poster, (70, 180))
 
-    # Details
-    draw.text((x, 180), f"Name: {name}", font=font_text, fill="#ffffff")
-    draw.text((x, 240), f"Seats: {', '.join(seats)}", font=font_text, fill="#ffffff")
-    draw.text((x, 300), f"Amount: ₹{amount}", font=font_text, fill="#ffffff")
-    draw.text((x, 360), f"UID: {uid}", font=font_text, fill="#ffffff")
-    draw.text((x, 420), f"Txn ID: {txn_id}", font=font_text, fill="#ffffff")
-    draw.text((x, 480), f"Paid To: 9154317035@ibl", font=font_text, fill="#ffffff")
-    draw.text((x, 540), f"Date: 12 July 2025 • Venue: TTD Kalyana Mandapam", font=font_small, fill="#cccccc")
+    # Details Section
+    details_x = 400
+    details_y = 160
+    spacing = 60
 
-    # QR Code
+    draw.text((details_x, details_y + spacing*0), f"👤 Name: {name}", font=font_text, fill="#ffffff")
+    draw.text((details_x, details_y + spacing*1), f"🎟️ Seats: {', '.join(seats)}", font=font_text, fill="#ffffff")
+    draw.text((details_x, details_y + spacing*2), f"💰 Amount Paid: ₹{amount}", font=font_text, fill="#ffffff")
+    draw.text((details_x, details_y + spacing*3), f"🔐 UID: {uid}", font=font_text, fill="#ffffff")
+    draw.text((details_x, details_y + spacing*4), f"📄 Txn ID: {txn_id}", font=font_text, fill="#ffffff")
+    draw.text((details_x, details_y + spacing*5), f"🏦 Paid To: 9154317035@ibl", font=font_text, fill="#cccccc")
+
+    # Footer - Venue and Date
+    draw.text((details_x, details_y + spacing*6 + 20),
+              f"📍 Venue: TTD Kalyana Mandapam", font=font_small, fill="#aaaaaa")
+    draw.text((details_x, details_y + spacing*7 + 20),
+              f"🗓️ Date: {datetime.now().strftime('%d %B %Y')}", font=font_small, fill="#aaaaaa")
+
+    # QR Code with UID
     qr = qrcode.make(uid)
-    qr = qr.resize((100, 100))
-    ticket.paste(qr, (1250, 550))
+    qr = qr.resize((140, 140))
+    ticket.paste(qr, (1220, 520))
+
+    # Optional label below QR
+    draw.text((1220, 670), "Scan for UID", font=font_small, fill="#ffffff")
 
     return ticket
-
 # ======================= STEP 2: PAYMENT ===========================
 if st.session_state.get("step") == "payment":
     info = st.session_state.get("booking")
