@@ -262,6 +262,7 @@ if form_submit:
 
 
 # ✅ Correctly defined outside of if-block and at top-level indentation
+# ✅ Correctly defined outside of if-block and at top-level indentation
 def generate_ticket(name, seats, amount, uid, txn_id):
     ticket = Image.new("RGB", (1400, 700), "#ffffff")
     draw = ImageDraw.Draw(ticket)
@@ -296,8 +297,8 @@ def generate_ticket(name, seats, amount, uid, txn_id):
 
     # Poster
     x = 400
-    if os.path.exists(POSTER_PATH):
-        poster = Image.open(POSTER_PATH).resize((300, 400))
+    if os.path.exists("poster.jpg"):
+        poster = Image.open("poster.jpg").resize((300, 400))
         ticket.paste(poster, (60, 180))
 
     # Details
@@ -306,10 +307,10 @@ def generate_ticket(name, seats, amount, uid, txn_id):
     draw.text((x, 300), f"Amount: ₹{amount}", font=font_text, fill="#ffffff")
     draw.text((x, 360), f"UID: {uid}", font=font_text, fill="#ffffff")
     draw.text((x, 420), f"Txn ID: {txn_id}", font=font_text, fill="#ffffff")
-    draw.text((x, 480), f"Paid To: {UPI_ID}", font=font_text, fill="#ffffff")
+    draw.text((x, 480), f"Paid To: 9154317035@ibl", font=font_text, fill="#ffffff")
     draw.text((x, 540), f"Date: 12 July 2025 • Venue: TTD Kalyana Mandapam", font=font_small, fill="#cccccc")
 
-    # QR Code for UID
+    # QR Code
     qr = qrcode.make(uid)
     qr = qr.resize((100, 100))
     ticket.paste(qr, (1250, 550))
