@@ -1,22 +1,20 @@
 # gsheets.py
 import gspread
 import json
+import streamlit as st
 from oauth2client.service_account import ServiceAccountCredentials
 
 SHEET_NAME = "DaarunamBookings"
 
 def get_worksheet():
     scope = ["https://spreadsheets.google.com/feeds", "https://www.googleapis.com/auth/drive"]
-    creds = ServiceAccountCredentials.from_json_keyfile_name("service_account.json", scope)
-    client = gspread.authorize(creds)
-    sheet = client.open(SHEET_NAME)
-    return sheet.sheet1
-def get_gsheet_client():
-    scope = ["https://spreadsheets.google.com/feeds", "https://www.googleapis.com/auth/drive"]
     creds_dict = st.secrets["google"]
     creds_json = json.dumps(creds_dict)
     creds = ServiceAccountCredentials.from_json_keyfile_dict(json.loads(creds_json), scopes=scope)
-    return gspread.authorize(creds)
+    client = gspread.authorize(creds)
+    sheet = client.open(SHEET_NAME)
+    return sheet.sheet1
+
 def get_booked_seats():
     worksheet = get_worksheet()
     records = worksheet.get_all_records()
