@@ -270,16 +270,16 @@ def generate_ticket(name, seats, amount, uid, txn_id):
 
     # Load fonts
     try:
-        font_title = ImageFont.truetype("arialbd.ttf", 42)
-        font_label = ImageFont.truetype("arial.ttf", 28)
-        font_value = ImageFont.truetype("arialbd.ttf", 28)
-        font_small = ImageFont.truetype("arial.ttf", 22)
+        font_title = ImageFont.truetype("arialbd.ttf", 100)
+        font_label = ImageFont.truetype("arial.ttf", 60)
+        font_value = ImageFont.truetype("arialbd.ttf", 55)
+        font_small = ImageFont.truetype("arial.ttf", 55)
     except:
         font_title = ImageFont.load_default()
         font_label = font_value = font_small = ImageFont.load_default()
 
     # Header bar
-    header_height = 70
+    header_height = 90
     draw.rectangle([0, 0, width, header_height], fill="#ffcc00")
     draw.text((80, 30), "🎬 DAARUNAM MOVIE TICKET", font=font_title, fill="#000000")
 
