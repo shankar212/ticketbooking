@@ -1,3 +1,5 @@
+from gsheets import append_booking_to_gsheet
+from gsheets import get_booked_seats
 import streamlit as st
 from PIL import Image, ImageDraw, ImageFont
 import pandas as pd
@@ -5,8 +7,6 @@ import qrcode
 import io
 import random
 import os
-from filelock import FileLock
-
 # ---------------------------- SETTINGS ----------------------------
 UPI_ID = "9154317035@ibl"
 PAYEE_NAME = "DAARUNAM"
@@ -18,14 +18,19 @@ POSTER_PATH = "poster.jpg"  # Replace with your real poster file
 # ---------------------------- INITIALIZATION ----------------------------
 st.set_page_config(page_title="DAARUNAM Booking", layout="wide", page_icon="🎬")
 
+# Initialize local CSV (only if not using for availability anymore)
 if not os.path.exists(CSV_PATH):
     pd.DataFrame(columns=["Name", "Mobile", "Seat Nos", "UID", "Transaction ID", "Amount"]).to_csv(CSV_PATH, index=False)
 
-booked_df = pd.read_csv(CSV_PATH)
-booked_seats = set()
-for seats in booked_df["Seat Nos"]:
-    booked_seats.update(seats.split(", "))
+# ✅ Get already booked seats from Google Sheet instead of CSV
+try:
+    booked_seats = get_booked_seats()
+except Exception as e:
+    st.error("❌ Failed to load booked seats from Google Sheet.")
+    st.exception(e)
+    booked_seats = set()
 
+# ✅ Ensure QR exists
 if not os.path.exists(QR_PATH):
     qr_img = qrcode.make(f"upi://pay?pa={UPI_ID}&pn={PAYEE_NAME}&am=50&cu=INR")
     qr_img.save(QR_PATH)
@@ -252,6 +257,66 @@ if form_submit:
         st.rerun()
 
 # ---------------------------- STEP 2: PAYMENT ----------------------------
+
+
+
+
+# ✅ Correctly defined outside of if-block and at top-level indentation
+def generate_ticket(name, seats, amount, uid, txn_id):
+    ticket = Image.new("RGB", (1400, 700), "#ffffff")
+    draw = ImageDraw.Draw(ticket)
+
+    try:
+        font_title = ImageFont.truetype("arialbd.ttf", 60)
+        font_text = ImageFont.truetype("arial.ttf", 40)
+        font_small = ImageFont.truetype("arial.ttf", 30)
+    except:
+        font_title = ImageFont.load_default()
+        font_text = ImageFont.load_default()
+        font_small = ImageFont.load_default()
+
+    # Background gradient
+    for y in range(700):
+        r = 30 + (y / 700) * 20
+        g = 30
+        b = 40
+        draw.line((0, y, 1400, y), fill=(int(r), int(g), int(b)))
+
+    # Perforated edges
+    for x in [50, 1350]:
+        for y in range(50, 650, 10):
+            draw.ellipse((x-5, y-5, x+5, y+5), fill="#888888")
+    for y in [50, 650]:
+        for x in range(50, 1350, 10):
+            draw.ellipse((x-5, y-5, x+5, y+5), fill="#888888")
+
+    # Header
+    draw.rectangle([50, 50, 1350, 150], fill="#ffcc00")
+    draw.text((60, 60), "🎬 DAARUNAM MOVIE TICKET", font=font_title, fill="#1a1a1a")
+
+    # Poster
+    x = 400
+    if os.path.exists("poster.jpg"):
+        poster = Image.open("poster.jpg").resize((300, 400))
+        ticket.paste(poster, (60, 180))
+
+    # Details
+    draw.text((x, 180), f"Name: {name}", font=font_text, fill="#ffffff")
+    draw.text((x, 240), f"Seats: {', '.join(seats)}", font=font_text, fill="#ffffff")
+    draw.text((x, 300), f"Amount: ₹{amount}", font=font_text, fill="#ffffff")
+    draw.text((x, 360), f"UID: {uid}", font=font_text, fill="#ffffff")
+    draw.text((x, 420), f"Txn ID: {txn_id}", font=font_text, fill="#ffffff")
+    draw.text((x, 480), f"Paid To: 9154317035@ibl", font=font_text, fill="#ffffff")
+    draw.text((x, 540), f"Date: 12 July 2025 • Venue: TTD Kalyana Mandapam", font=font_small, fill="#cccccc")
+
+    # QR Code
+    qr = qrcode.make(uid)
+    qr = qr.resize((100, 100))
+    ticket.paste(qr, (1250, 550))
+
+    return ticket
+
+# ======================= STEP 2: PAYMENT ===========================
 if st.session_state.get("step") == "payment":
     info = st.session_state.get("booking")
 
@@ -282,68 +347,13 @@ if st.session_state.get("step") == "payment":
             # Save to CSV
             new_row = pd.DataFrame([[name, mobile, seat_str, uid, txn_id.strip(), info['amount']]],
                                    columns=["Name", "Mobile", "Seat Nos", "UID", "Transaction ID", "Amount"])
-            lock_path = CSV_PATH + ".lock"
-with FileLock(lock_path):
-    current_df = pd.read_csv(CSV_PATH)
-    updated_df = pd.concat([current_df, new_row], ignore_index=True)
-    updated_df.to_csv(CSV_PATH, index=False)
+            updated_df = pd.concat([booked_df, new_row], ignore_index=True)
+            updated_df.to_csv(CSV_PATH, index=False)
 
+            # Save to Google Sheet
+            append_booking_to_gsheet(name, mobile, seat_str, uid, txn_id.strip(), info['amount'])
 
-            # Generate ticket image
-            def generate_ticket(name, seats, amount, uid, txn_id):
-                ticket = Image.new("RGB", (1400, 700), "#ffffff")
-                draw = ImageDraw.Draw(ticket)
-
-                try:
-                    font_title = ImageFont.truetype("arialbd.ttf", 60)
-                    font_text = ImageFont.truetype("arial.ttf", 40)
-                    font_small = ImageFont.truetype("arial.ttf", 30)
-                except:
-                    font_title = ImageFont.load_default()
-                    font_text = ImageFont.load_default()
-                    font_small = ImageFont.load_default()
-
-                # Background gradient
-                for y in range(700):
-                    r = 30 + (y / 700) * 20
-                    g = 30
-                    b = 40
-                    draw.line((0, y, 1400, y), fill=(int(r), int(g), int(b)))
-
-                # Perforated edges
-                for x in [50, 1350]:
-                    for y in range(50, 650, 10):
-                        draw.ellipse((x-5, y-5, x+5, y+5), fill="#888888")
-                for y in [50, 650]:
-                    for x in range(50, 1350, 10):
-                        draw.ellipse((x-5, y-5, x+5, y+5), fill="#888888")
-
-                # Header
-                draw.rectangle([50, 50, 1350, 150], fill="#ffcc00")
-                draw.text((60, 60), "🎬 DAARUNAM MOVIE TICKET", font=font_title, fill="#1a1a1a")
-
-                # Poster
-                x = 400
-                if os.path.exists(POSTER_PATH):
-                    poster = Image.open(POSTER_PATH).resize((300, 400))
-                    ticket.paste(poster, (60, 180))
-
-                # Details
-                draw.text((x, 180), f"Name: {name}", font=font_text, fill="#ffffff")
-                draw.text((x, 240), f"Seats: {', '.join(seats)}", font=font_text, fill="#ffffff")
-                draw.text((x, 300), f"Amount: ₹{amount}", font=font_text, fill="#ffffff")
-                draw.text((x, 360), f"UID: {uid}", font=font_text, fill="#ffffff")
-                draw.text((x, 420), f"Txn ID: {txn_id}", font=font_text, fill="#ffffff")
-                draw.text((x, 480), f"Paid To: {UPI_ID}", font=font_text, fill="#ffffff")
-                draw.text((x, 540), f"Date: 12 July 2025 • Venue: TTD Kalyana Mandapam", font=font_small, fill="#cccccc")
-
-                # QR Code for UID
-                qr = qrcode.make(uid)
-                qr = qr.resize((100, 100))
-                ticket.paste(qr, (1250, 550))
-
-                return ticket
-
+            # Generate Ticket
             ticket_img = generate_ticket(name, info['seats'], info['amount'], uid, txn_id)
 
             buffer = io.BytesIO()
@@ -358,6 +368,8 @@ with FileLock(lock_path):
             st.session_state.clear()
 
     st.markdown("</div>", unsafe_allow_html=True)
+
+
 
 # ---------------------------- FOOTER ----------------------------
 st.divider()
