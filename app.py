@@ -370,7 +370,8 @@ if st.session_state.get("step") == "payment":
             ticket_img.save(buffer, format="PNG")
             buffer.seek(0)
 
-            st.image(ticket_img, caption="🎫 Your Ticket — Show at Entry")
+            #st.image(ticket_img, caption="🎫 Your Ticket — Show at Entry")
+            display_ticket_image(ticket_img)
             st.download_button("📥 Download Ticket", buffer, file_name=f"ticket_{uid}.png", mime="image/png")
 
             st.success(f"✅ Booking Confirmed! Your UID is: `{uid}`")
