@@ -1,6 +1,5 @@
 # gsheets.py
 import gspread
-import json
 import streamlit as st
 from oauth2client.service_account import ServiceAccountCredentials
 
@@ -8,9 +7,8 @@ SHEET_NAME = "DaarunamBookings"
 
 def get_worksheet():
     scope = ["https://spreadsheets.google.com/feeds", "https://www.googleapis.com/auth/drive"]
-    creds_dict = st.secrets["google"]
-    creds_json = json.dumps(creds_dict)
-    creds = ServiceAccountCredentials.from_json_keyfile_dict(json.loads(creds_json), scopes=scope)
+    creds_dict = dict(st.secrets["google"])  # Convert AttrDict to plain dict
+    creds = ServiceAccountCredentials.from_json_keyfile_dict(creds_dict, scopes=scope)
     client = gspread.authorize(creds)
     sheet = client.open(SHEET_NAME)
     return sheet.sheet1
