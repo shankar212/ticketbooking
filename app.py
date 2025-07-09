@@ -5,6 +5,7 @@ import qrcode
 import io
 import random
 import os
+from filelock import FileLock
 
 # ---------------------------- SETTINGS ----------------------------
 UPI_ID = "9154317035@ibl"
@@ -281,8 +282,12 @@ if st.session_state.get("step") == "payment":
             # Save to CSV
             new_row = pd.DataFrame([[name, mobile, seat_str, uid, txn_id.strip(), info['amount']]],
                                    columns=["Name", "Mobile", "Seat Nos", "UID", "Transaction ID", "Amount"])
-            updated_df = pd.concat([booked_df, new_row], ignore_index=True)
-            updated_df.to_csv(CSV_PATH, index=False)
+            lock_path = CSV_PATH + ".lock"
+with FileLock(lock_path):
+    current_df = pd.read_csv(CSV_PATH)
+    updated_df = pd.concat([current_df, new_row], ignore_index=True)
+    updated_df.to_csv(CSV_PATH, index=False)
+
 
             # Generate ticket image
             def generate_ticket(name, seats, amount, uid, txn_id):
