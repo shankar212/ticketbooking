@@ -344,6 +344,12 @@ if st.session_state.get("step") == "payment":
             mobile = info['mobile']
             seat_str = ", ".join(info['seats'])
 
+            # ✅ Safely reload CSV here to avoid NameError
+            if not os.path.exists(CSV_PATH):
+                booked_df = pd.DataFrame(columns=["Name", "Mobile", "Seat Nos", "UID", "Transaction ID", "Amount"])
+            else:
+                booked_df = pd.read_csv(CSV_PATH)
+
             # Save to CSV
             new_row = pd.DataFrame([[name, mobile, seat_str, uid, txn_id.strip(), info['amount']]],
                                    columns=["Name", "Mobile", "Seat Nos", "UID", "Transaction ID", "Amount"])
