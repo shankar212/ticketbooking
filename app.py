@@ -7,6 +7,7 @@ import qrcode
 import io
 import random
 import os
+from datetime import datetime
 # ---------------------------- SETTINGS ----------------------------
 UPI_ID = "9154317035@ibl"
 PAYEE_NAME = "DAARUNAM"
@@ -262,58 +263,65 @@ if form_submit:
 
 
 # ✅ Correctly defined outside of if-block and at top-level indentation
-# ✅ Correctly defined outside of if-block and at top-level indentation
 def generate_ticket(name, seats, amount, uid, txn_id):
-    ticket = Image.new("RGB", (1400, 700), "#ffffff")
+    width, height = 1000, 450
+    ticket = Image.new("RGB", (width, height), "#1a1a1a")
     draw = ImageDraw.Draw(ticket)
 
+    # Load fonts
     try:
-        font_title = ImageFont.truetype("arialbd.ttf", 60)
-        font_text = ImageFont.truetype("arial.ttf", 40)
-        font_small = ImageFont.truetype("arial.ttf", 30)
+        font_title = ImageFont.truetype("arialbd.ttf", 42)
+        font_label = ImageFont.truetype("arial.ttf", 28)
+        font_value = ImageFont.truetype("arialbd.ttf", 28)
+        font_small = ImageFont.truetype("arial.ttf", 22)
     except:
         font_title = ImageFont.load_default()
-        font_text = ImageFont.load_default()
-        font_small = ImageFont.load_default()
+        font_label = font_value = font_small = ImageFont.load_default()
 
-    # Background gradient
-    for y in range(700):
-        r = 30 + (y / 700) * 20
-        g = 30
-        b = 40
-        draw.line((0, y, 1400, y), fill=(int(r), int(g), int(b)))
+    # Header bar
+    header_height = 70
+    draw.rectangle([0, 0, width, header_height], fill="#ffcc00")
+    draw.text((20, 15), "🎬 DAARUNAM MOVIE TICKET", font=font_title, fill="#000000")
 
-    # Perforated edges
-    for x in [50, 1350]:
-        for y in range(50, 650, 10):
-            draw.ellipse((x-5, y-5, x+5, y+5), fill="#888888")
-    for y in [50, 650]:
-        for x in range(50, 1350, 10):
-            draw.ellipse((x-5, y-5, x+5, y+5), fill="#888888")
-
-    # Header
-    draw.rectangle([50, 50, 1350, 150], fill="#ffcc00")
-    draw.text((60, 60), "🎬 DAARUNAM MOVIE TICKET", font=font_title, fill="#1a1a1a")
-
-    # Poster
-    x = 400
+    # Poster image (if available)
     if os.path.exists("poster.jpg"):
-        poster = Image.open("poster.jpg").resize((300, 400))
-        ticket.paste(poster, (60, 180))
+        poster = Image.open("poster.jpg").resize((180, 250))
+        ticket.paste(poster, (20, header_height + 30))
 
-    # Details
-    draw.text((x, 180), f"Name: {name}", font=font_text, fill="#ffffff")
-    draw.text((x, 240), f"Seats: {', '.join(seats)}", font=font_text, fill="#ffffff")
-    draw.text((x, 300), f"Amount: ₹{amount}", font=font_text, fill="#ffffff")
-    draw.text((x, 360), f"UID: {uid}", font=font_text, fill="#ffffff")
-    draw.text((x, 420), f"Txn ID: {txn_id}", font=font_text, fill="#ffffff")
-    draw.text((x, 480), f"Paid To: 9154317035@ibl", font=font_text, fill="#ffffff")
-    draw.text((x, 540), f"Date: 12 July 2025 • Venue: TTD Kalyana Mandapam", font=font_small, fill="#cccccc")
+    # Ticket info box
+    info_x = 220
+    info_y = header_height + 30
+    spacing = 42
+
+    info_items = [
+        ("👤 Name:", name),
+        ("🎟️ Seats:", ", ".join(seats)),
+        ("💰 Amount:", f"₹{amount}"),
+        ("🔐 UID:", uid),
+        ("📄 Txn ID:", txn_id),
+        ("🏦 Paid To:", "9154317035@ibl"),
+        ("🗓️ Date:", datetime.now().strftime("%d %B %Y")),
+        ("📍 Venue:", "TTD Kalyana Mandapam"),
+    ]
+
+    for i, (label, value) in enumerate(info_items):
+        y = info_y + i * spacing
+        draw.text((info_x, y), label, font=font_label, fill="#bbbbbb")
+        draw.text((info_x + 160, y), value, font=font_value, fill="#ffffff")
 
     # QR Code
     qr = qrcode.make(uid)
-    qr = qr.resize((100, 100))
-    ticket.paste(qr, (1250, 550))
+    qr = qr.resize((110, 110))
+    qr_x = width - 140
+    qr_y = height - 160
+    ticket.paste(qr, (qr_x, qr_y))
+
+    draw.text((qr_x, qr_y + 120), "Scan for UID", font=font_small, fill="#cccccc")
+
+    # Perforated edge circles
+    for y in range(90, height - 30, 14):
+        draw.ellipse((5, y - 3, 13, y + 5), fill="#555555")
+        draw.ellipse((width - 13, y - 3, width - 5, y + 5), fill="#555555")
 
     return ticket
 # ======================= STEP 2: PAYMENT ===========================
