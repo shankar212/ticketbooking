@@ -281,7 +281,7 @@ def generate_ticket(name, seats, amount, uid, txn_id):
     # Header bar
     header_height = 70
     draw.rectangle([0, 0, width, header_height], fill="#ffcc00")
-    draw.text((20, 15), "🎬 DAARUNAM MOVIE TICKET", font=font_title, fill="#000000")
+    draw.text((80, 30), "🎬 DAARUNAM MOVIE TICKET", font=font_title, fill="#000000")
 
     # Poster image (if available)
     if os.path.exists("poster.jpg"):
