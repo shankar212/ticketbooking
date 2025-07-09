@@ -264,60 +264,68 @@ if form_submit:
 
 # ✅ Correctly defined outside of if-block and at top-level indentation
 def generate_ticket(name, seats, amount, uid, txn_id):
-    width, height = 1400, 700
-    ticket = Image.new("RGB", (width, height), "#1a1a1a")
+    width, height = 1200, 600  # Adjusted for better text scaling
+    bg_color = "#1a1a1a"
+    ticket = Image.new("RGB", (width, height), bg_color)
     draw = ImageDraw.Draw(ticket)
 
-    # Load fonts
+    # Load fonts with larger sizes
     try:
-        font_title = ImageFont.truetype("arialbd.ttf", 80)
-        font_label = ImageFont.truetype("arial.ttf", 38)
-        font_value = ImageFont.truetype("arialbd.ttf", 42)
-        font_small = ImageFont.truetype("arial.ttf", 32)
+        font_title = ImageFont.truetype("arialbd.ttf", 90)
+        font_label = ImageFont.truetype("arial.ttf", 44)
+        font_value = ImageFont.truetype("arialbd.ttf", 48)
+        font_small = ImageFont.truetype("arial.ttf", 36)
     except:
         font_title = ImageFont.load_default()
         font_label = font_value = font_small = ImageFont.load_default()
 
     # Header bar
-    draw.rectangle([0, 0, width, 120], fill="#ffcc00")
-    draw.text((50, 20), "DAARUNAM MOVIE TICKET", font=font_title, fill="#000000")
+    header_height = 110
+    draw.rectangle([0, 0, width, header_height], fill="#ffcc00")
+
+    title_text = "🎬 DAARUNAM MOVIE TICKET"
+    title_width = draw.textlength(title_text, font=font_title)
+    draw.text(((width - title_width) / 2, 10), title_text, font=font_title, fill="#000000")
 
     # Poster
+    poster_x = 40
     if os.path.exists("poster.jpg"):
-        poster = Image.open("poster.jpg").resize((300, 400))
-        ticket.paste(poster, (50, 160))
+        poster = Image.open("poster.jpg").resize((220, 300))
+        ticket.paste(poster, (poster_x, header_height + 40))
 
     # Ticket details
-    x_offset = 380
-    y_start = 160
-    y_gap = 65
+    details_x = 300
+    details_y_start = header_height + 40
+    y_gap = 55
 
     info_items = [
-        ("Name", name),
-        ("Seats", ", ".join(seats)),
-        ("Amount", f"₹{amount}"),
-        ("UID", uid),
-        ("Transaction ID", txn_id),
-        ("Paid To", "9154317035@ibl"),
-        ("Date", datetime.now().strftime("%d %B %Y")),
-        ("Venue", "TTD Kalyana Mandapam"),
+        ("👤 Name", name),
+        ("🎟️ Seats", ", ".join(seats)),
+        ("💰 Amount", f"₹{amount}"),
+        ("🆔 UID", uid),
+        ("🔑 Txn ID", txn_id),
+        ("🏦 Paid To", "9154317035@ibl"),
+        ("📅 Date", datetime.now().strftime("%d %B %Y")),
+        ("📍 Venue", "TTD Kalyana Mandapam"),
     ]
 
     for i, (label, value) in enumerate(info_items):
-        y = y_start + i * y_gap
-        draw.text((x_offset, y), f"{label}:", font=font_label, fill="#cccccc")
-        draw.text((x_offset + 250, y), value, font=font_value, fill="#ffffff")
+        y = details_y_start + i * y_gap
+        draw.text((details_x, y), f"{label}:", font=font_label, fill="#cccccc")
+        draw.text((details_x + 270, y), value, font=font_value, fill="#ffffff")
 
     # QR Code
     qr = qrcode.make(uid)
-    qr = qr.resize((140, 140))
-    ticket.paste(qr, (width - 180, height - 200))
-    draw.text((width - 190, height - 50), "Scan UID", font=font_small, fill="#aaaaaa")
+    qr = qr.resize((130, 130))
+    qr_x = width - 160
+    qr_y = height - 180
+    ticket.paste(qr, (qr_x, qr_y))
+    draw.text((qr_x - 10, qr_y + 140), "Scan for UID", font=font_small, fill="#aaaaaa")
 
     # Perforated edges
-    for y in range(130, height - 30, 16):
-        draw.ellipse((10, y - 5, 20, y + 5), fill="#444444")
-        draw.ellipse((width - 20, y - 5, width - 10, y + 5), fill="#444444")
+    for y in range(120, height - 30, 16):
+        draw.ellipse((8, y - 5, 18, y + 5), fill="#444444")
+        draw.ellipse((width - 18, y - 5, width - 8, y + 5), fill="#444444")
 
     return ticket
 # ======================= STEP 2: PAYMENT ===========================
