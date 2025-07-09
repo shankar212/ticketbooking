@@ -16,7 +16,7 @@ def get_worksheet():
 def get_booked_seats():
     worksheet = get_worksheet()
     try:
-        records = worksheet.get_all_records(expected_headers=["Name", "Mobile", "Seat Nos", "UID", "Transaction ID", "Amount"])
+        records = worksheet.get_all_records()
     except Exception as e:
         st.error("❌ Failed to load booked seats from Google Sheet.")
         st.exception(e)
@@ -30,6 +30,7 @@ def get_booked_seats():
             if seat_clean:
                 booked.add(seat_clean)
     return booked
+
 
 
 def append_booking_to_gsheet(name, mobile, seat_str, uid, txn_id, amount):
