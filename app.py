@@ -264,56 +264,72 @@ if form_submit:
 
 # ✅ Correctly defined outside of if-block and at top-level indentation
 def generate_ticket(name, seats, amount, uid, txn_id):
-    width, height = 1200, 600
-    ticket = Image.new("RGB", (width, height), "#1c1c1e")
+    # Create ticket canvas
+    ticket = Image.new("RGB", (1400, 800), "#ffffff")  # Increased height for better spacing
     draw = ImageDraw.Draw(ticket)
 
-    # Load fonts
+    # Load fonts with fallback
     try:
-        font_title = ImageFont.truetype("arialbd.ttf", 64)
-        font_label = ImageFont.truetype("arial.ttf", 30)
-        font_value = ImageFont.truetype("arialbd.ttf", 34)
-        font_small = ImageFont.truetype("arial.ttf", 24)
+        font_title = ImageFont.truetype("arialbd.ttf", 70)  # Larger title
+        font_text = ImageFont.truetype("arial.ttf", 45)     # Slightly larger text
+        font_small = ImageFont.truetype("arial.ttf", 35)    # Adjusted small text
     except:
         font_title = ImageFont.load_default()
-        font_label = font_value = font_small = ImageFont.load_default()
+        font_text = ImageFont.load_default()
+        font_small = ImageFont.load_default()
 
-    # Header bar
-    draw.rectangle([0, 0, width, 90], fill="#ffcc00")
-    draw.text((width // 2 - 300, 20), "DAARUNAM MOVIE TICKET", font=font_title, fill="#000000")
+    # Background gradient
+    for y in range(800):
+        r = 20 + (y / 800) * 30  # Smoother gradient
+        g = 25
+        b = 35
+        draw.line((0, y, 1400, y), fill=(int(r), int(g), int(b)))
 
-    # Poster image
+    # Perforated edges
+    for x in [50, 1350]:
+        for y in range(50, 750, 12):  # Adjusted spacing
+            draw.ellipse((x-6, y-6, x+6, y+6), fill="#888888")
+    for y in [50, 750]:
+        for x in range(50, 1350, 12):
+            draw.ellipse((x-6, y-6, x+6, y+6), fill="#888888")
+
+    # Header
+    draw.rectangle([50, 50, 1350, 170], fill="#ffcc00")  # Taller header
+    # Center title text
+    title = "🎬 DAARUNAM MOVIE TICKET"
+    title_bbox = draw.textbbox((0, 0), title, font=font_title)
+    title_width = title_bbox[2] - title_bbox[0]
+    draw.text(((1400 - title_width) // 2, 60), title, font=font_title, fill="#1a1a1a")
+
+    # Poster
     if os.path.exists("poster.jpg"):
-        poster = Image.open("poster.jpg").resize((220, 320))
-        ticket.paste(poster, (40, 140))
+        poster = Image.open("poster.jpg").resize((350, 450))  # Larger poster
+        ticket.paste(poster, (80, 200))  # Adjusted position
 
-    # Info section
-    info_x = 280
-    info_y = 130
-    spacing = 45
-    draw.rectangle([info_x - 20, info_y - 20, width - 30, height - 30], outline="#ffcc00", width=2)
+    # Details section
+    details_x = 480  # Shifted for better alignment
+    details_y_start = 200
+    line_spacing = 70  # Consistent spacing
 
-    info_items = [
-        ("Name", name),
-        ("Seats", ", ".join(seats)),
-        ("Amount", f"₹{amount}"),
-        ("UID", uid),
-        ("Transaction ID", txn_id),
-        ("Paid To", "9154317035@ibl"),
-        ("Date", datetime.now().strftime("%d %B %Y")),
-        ("Venue", "TTD Kalyana Mandapam"),
-    ]
+    # Helper function to center text
+    def draw_centered_text(y, text, font, fill):
+        bbox = draw.textbbox((0, 0), text, font=font)
+        width = bbox[2] - bbox[0]
+        draw.text((details_x + (800 - width) // 2, y), text, font=font, fill=fill)
 
-    for i, (label, value) in enumerate(info_items):
-        y = info_y + i * spacing
-        draw.text((info_x, y), f"{label}:", font=font_label, fill="#bbbbbb")
-        draw.text((info_x + 180, y), value, font=font_value, fill="#ffffff")
+    # Draw details
+    draw_centered_text(details_y_start, f"Name: {name}", font=font_text, fill="#ffffff")
+    draw_centered_text(details_y_start + line_spacing, f"Seats: {', '.join(seats)}", font=font_text, fill="#ffffff")
+    draw_centered_text(details_y_start + 2 * line_spacing, f"Amount: ₹{amount}", font=font_text, fill="#ffffff")
+    draw_centered_text(details_y_start + 3 * line_spacing, f"UID: {uid}", font=font_text, fill="#ffffff")
+    draw_centered_text(details_y_start + 4 * line_spacing, f"Txn ID: {txn_id}", font=font_text, fill="#ffffff")
+    draw_centered_text(details_y_start + 5 * line_spacing, f"Paid To: 9154317035@ibl", font=font_text, fill="#ffffff")
+    draw_centered_text(details_y_start + 6 * line_spacing, f"Date: 12 July 2025 • Venue: TTD Kalyana Mandapam", font=font_small, fill="#cccccc")
 
     # QR Code
     qr = qrcode.make(uid)
-    qr = qr.resize((120, 120))
-    ticket.paste(qr, (width - 160, height - 180))
-    draw.text((width - 170, height - 50), "Scan for UID", font=font_small, fill="#cccccc")
+    qr = qr.resize((120, 120))  # Slightly larger QR
+    ticket.paste(qr, (1250, 650))  # Adjusted position
 
     return ticket
 # ======================= STEP 2: PAYMENT ===========================
