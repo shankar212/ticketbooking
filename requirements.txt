@@ -3,3 +3,5 @@ pandas
 qrcode
 Pillow
 filelock
+gspread
+oauth2client
