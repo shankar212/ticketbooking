@@ -263,82 +263,58 @@ if form_submit:
 
 
 # ✅ Correctly defined outside of if-block and at top-level indentation
+# ✅ Correctly defined outside of if-block and at top-level indentation
 def generate_ticket(name, seats, amount, uid, txn_id):
-    width, height = 1300, 600
-    bg_color = "#121212"
-    accent_color = "#ffcc00"
-    text_color = "#ffffff"
-    ticket = Image.new("RGB", (width, height), bg_color)
+    ticket = Image.new("RGB", (1400, 700), "#ffffff")
     draw = ImageDraw.Draw(ticket)
 
-    # Load fonts
     try:
-        font_title = ImageFont.truetype("arialbd.ttf", 72)
-        font_label = ImageFont.truetype("arialbd.ttf", 34)
-        font_value = ImageFont.truetype("arial.ttf", 36)
-        font_small = ImageFont.truetype("arial.ttf", 28)
+        font_title = ImageFont.truetype("arialbd.ttf", 60)
+        font_text = ImageFont.truetype("arial.ttf", 40)
+        font_small = ImageFont.truetype("arial.ttf", 30)
     except:
-        font_title = font_label = font_value = font_small = ImageFont.load_default()
+        font_title = ImageFont.load_default()
+        font_text = ImageFont.load_default()
+        font_small = ImageFont.load_default()
 
-    # ---------- HEADER ----------
-    draw.rectangle([0, 0, width, 100], fill=accent_color)
-    title = "🎬 DAARUNAM MOVIE TICKET"
-    title_width = draw.textlength(title, font=font_title)
-    draw.text(((width - title_width) / 2, 10), title, font=font_title, fill=bg_color)
+    # Background gradient
+    for y in range(700):
+        r = 30 + (y / 700) * 20
+        g = 30
+        b = 40
+        draw.line((0, y, 1400, y), fill=(int(r), int(g), int(b)))
 
-    # ---------- POSTER ----------
+    # Perforated edges
+    for x in [50, 1350]:
+        for y in range(50, 650, 10):
+            draw.ellipse((x-5, y-5, x+5, y+5), fill="#888888")
+    for y in [50, 650]:
+        for x in range(50, 1350, 10):
+            draw.ellipse((x-5, y-5, x+5, y+5), fill="#888888")
+
+    # Header
+    draw.rectangle([50, 50, 1350, 150], fill="#ffcc00")
+    draw.text((60, 60), "🎬 DAARUNAM MOVIE TICKET", font=font_title, fill="#1a1a1a")
+
+    # Poster
+    x = 400
     if os.path.exists("poster.jpg"):
-        poster = Image.open("poster.jpg").resize((200, 280))
-        border = ImageOps.expand(poster, border=4, fill=accent_color)
-        ticket.paste(border, (40, 150))
+        poster = Image.open("poster.jpg").resize((300, 400))
+        ticket.paste(poster, (60, 180))
 
-    # ---------- INFO BOX (CSS STYLED) ----------
-    info_box_x = 270
-    info_box_y = 130
-    info_box_width = width - info_box_x - 200
-    info_box_height = 340
-    draw.rounded_rectangle(
-        [info_box_x, info_box_y, info_box_x + info_box_width, info_box_y + info_box_height],
-        radius=20, fill="#1e1e1e", outline="#333333", width=2
-    )
+    # Details
+    draw.text((x, 180), f"Name: {name}", font=font_text, fill="#ffffff")
+    draw.text((x, 240), f"Seats: {', '.join(seats)}", font=font_text, fill="#ffffff")
+    draw.text((x, 300), f"Amount: ₹{amount}", font=font_text, fill="#ffffff")
+    draw.text((x, 360), f"UID: {uid}", font=font_text, fill="#ffffff")
+    draw.text((x, 420), f"Txn ID: {txn_id}", font=font_text, fill="#ffffff")
+    draw.text((x, 480), f"Paid To: 9154317035@ibl", font=font_text, fill="#ffffff")
+    draw.text((x, 540), f"Date: 12 July 2025 • Venue: TTD Kalyana Mandapam", font=font_small, fill="#cccccc")
 
-    info_items = [
-        ("👤 Name", name),
-        ("🎟️ Seats", ", ".join(seats)),
-        ("💰 Amount", f"₹{amount}"),
-        ("🆔 UID", uid),
-        ("🔑 Txn ID", txn_id),
-        ("🏦 Paid To", "9154317035@ibl"),
-        ("📅 Date", datetime.now().strftime("%d %B %Y")),
-        ("📍 Venue", "TTD Kalyana Mandapam"),
-    ]
-
-    label_x = info_box_x + 30
-    value_x = label_x + 230
-    line_y = info_box_y + 25
-    line_height = 42
-
-    for label, value in info_items:
-        draw.text((label_x, line_y), f"{label}:", font=font_label, fill="#aaaaaa")
-        draw.text((value_x, line_y), value, font=font_value, fill=text_color)
-        line_y += line_height + 5
-
-    # ---------- QR CODE ----------
+    # QR Code
     qr = qrcode.make(uid)
-    qr = qr.resize((130, 130))
-    qr_box_x = width - 160
-    qr_box_y = height - 180
-    ticket.paste(qr, (qr_box_x, qr_box_y))
-    draw.text((qr_box_x - 10, qr_box_y + 140), "Scan for UID", font=font_small, fill="#999999")
-
-    # ---------- INNER SHADOW FRAME (like CSS box-shadow inset) ----------
-    border_margin = 20
-    for x in range(border_margin, width - border_margin, 18):
-        draw.line([(x, border_margin), (x + 8, border_margin)], fill="#333333", width=1)
-        draw.line([(x, height - border_margin), (x + 8, height - border_margin)], fill="#333333", width=1)
-    for y in range(border_margin, height - border_margin, 18):
-        draw.line([(border_margin, y), (border_margin, y + 8)], fill="#333333", width=1)
-        draw.line([(width - border_margin, y), (width - border_margin, y + 8)], fill="#333333", width=1)
+    qr = qr.resize((100, 100))
+    ticket.paste(qr, (1250, 550))
 
     return ticket
 # ======================= STEP 2: PAYMENT ===========================
