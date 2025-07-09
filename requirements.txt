@@ -1,11 +1,4 @@
-# Streamlit: For building and running the web application
-streamlit==1.35.0
-
-# Pillow: For image manipulation and ticket generation
-Pillow==10.4.0
-
-# Pandas: For handling booking data in CSV format
-pandas==2.2.2
-
-# qrcode: For generating UPI payment QR codes
-qrcode==7.4.2
+streamlit
+pandas
+qrcode
+Pillow
