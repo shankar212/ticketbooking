@@ -7,6 +7,7 @@ import qrcode
 import io
 import random
 import os
+from datetime import datetime
 # ---------------------------- SETTINGS ----------------------------
 UPI_ID = "9154317035@ibl"
 PAYEE_NAME = "DAARUNAM"
@@ -262,42 +263,65 @@ if form_submit:
 
 
 # ✅ Correctly defined outside of if-block and at top-level indentation
-from PIL import Image, ImageDraw, ImageFont
-import qrcode
-import os
-from datetime import datetime
-
 def generate_ticket(name, seats, amount, uid, txn_id):
-    width, height = 1400, 700
-    ticket = Image.new("RGB", (width, height), "#1a1a1a")
+    # Define ticket dimensions and create a blank image
+    width, height = 1600, 800
+    ticket = Image.new("RGB", (width, height), "#ffffff")
     draw = ImageDraw.Draw(ticket)
 
-    # Load fonts
+    # Load fonts with fallback to default if unavailable
     try:
-        font_title = ImageFont.truetype("arialbd.ttf", 64)
-        font_label = ImageFont.truetype("arial.ttf", 38)
-        font_value = ImageFont.truetype("arialbd.ttf", 38)
-        font_small = ImageFont.truetype("arial.ttf", 28)
+        font_title = ImageFont.truetype("arialbd.ttf", 70)  # Bold title font
+        font_label = ImageFont.truetype("arial.ttf", 45)   # Regular label font
+        font_value = ImageFont.truetype("arialbd.ttf", 45) # Bold value font
+        font_small = ImageFont.truetype("arial.ttf", 35)   # Small text font
+        font_footer = ImageFont.truetype("arial.ttf", 30)  # Footer font
     except:
         font_title = ImageFont.load_default()
-        font_label = font_value = font_small = ImageFont.load_default()
+        font_label = ImageFont.load_default()
+        font_value = ImageFont.load_default()
+        font_small = ImageFont.load_default()
+        font_footer = ImageFont.load_default()
 
-    # Top header bar
-    header_height = 100
-    draw.rectangle([0, 0, width, header_height], fill="#ffcc00")
-    draw.text((40, 20), "🎬 DAARUNAM MOVIE TICKET", font=font_title, fill="#000000")
+    # Draw holographic background gradient
+    for y in range(height):
+        r = 220 - (y / height) * 40  # Subtle red gradient
+        g = 220 - (y / height) * 30  # Subtle green gradient
+        b = 230                      # Fixed blue for cool tone
+        draw.line((0, y, width, y), fill=(int(r), int(g), int(b)))
 
-    # Poster image
+    # Draw decorative border
+    draw.rectangle([20, 20, width-20, height-20], outline="#ffcc00", width=5)
+
+    # Draw perforated edges
+    for x in [50, width-50]:
+        for y in range(50, height-50, 15):
+            draw.ellipse((x-7, y-7, x+7, y+7), fill="#999999")  # Circular perforations
+    for y in [50, height-50]:
+        for x in range(50, width-50, 15):
+            draw.ellipse((x-7, y-7, x+7, y+7), fill="#999999")
+
+    # Draw header with gradient
+    header_height = 120
+    draw.rectangle([50, 50, width-50, 50+header_height], fill="#ffcc00")
+    draw.text((60, 60), "🎬 DAARUNAM PREMIUM TICKET", font=font_title, fill="#1a1a1a")
+
+    # Draw footer with holographic strip
+    footer_height = 60
+    draw.rectangle([50, height-50-footer_height, width-50, height-50], fill="rgba(255, 204, 0, 0.3)")
+    for x in range(60, width-60, 20):
+        draw.line((x, height-50-footer_height, x+10, height-50), fill="#ffcc00", width=2)
+    draw.text((60, height-50-footer_height+15), "© 2025 DAARUNAM Movie | Scan Ticket at Entry", font=font_footer, fill="#555555")
+
+    # Paste movie poster if available
+    x_start = 450
     if os.path.exists("poster.jpg"):
-        poster = Image.open("poster.jpg").resize((300, 420))
+        poster = Image.open("poster.jpg").resize((350, 450))
         ticket.paste(poster, (60, 180))
 
-    # Info starting point
-    x_start = 400
-    y_start = 160
-    spacing = 60
-
-    # Ticket info
+    # Ticket info section
+    y_start = 180
+    spacing = 70
     info = [
         ("👤 Name:", name),
         ("🎟️ Seats:", ", ".join(seats)),
@@ -305,29 +329,32 @@ def generate_ticket(name, seats, amount, uid, txn_id):
         ("🔐 UID:", uid),
         ("📄 Txn ID:", txn_id),
         ("🏦 Paid To:", "9154317035@ibl"),
-        ("📍 Venue:", "TTD Kalyana Mandapam"),
+        ("📍 Venue:", "TTD Kalyana Mandapam, Adilabad"),
         ("🗓️ Date:", datetime.now().strftime("%d %B %Y")),
     ]
 
+    # Draw ticket info with labels and values
     for i, (label, value) in enumerate(info):
         y = y_start + i * spacing
-        draw.text((x_start, y), label, font=font_label, fill="#dddddd")
-        draw.text((x_start + 220, y), value, font=font_value, fill="#ffffff")
+        draw.text((x_start, y), label, font=font_label, fill="#333333")
+        draw.text((x_start + 250, y), value, font=font_value, fill="#1a1a1a")
 
-    # Perforated edges
-    for x in [50, width - 50]:
-        for y in range(120, height - 50, 14):
-            draw.ellipse((x - 4, y - 4, x + 4, y + 4), fill="#666666")
-
-    # QR code with UID
+    # Draw QR code with UID
     qr = qrcode.make(uid)
     qr = qr.resize((140, 140))
-    ticket.paste(qr, (width - 180, height - 180))
+    ticket.paste(qr, (width-190, height-230))
+    draw.text((width-190, height-80), "Scan for UID", font=font_small, fill="#555555")
 
-    draw.text((width - 180, height - 40), "Scan for UID", font=font_small, fill="#aaaaaa")
+    # Draw barcode
+    barcode_y = height - 230
+    for i in range(0, 200, 4):
+        width_factor = 2 if i % 8 == 0 else 1  # Vary line width for barcode effect
+        draw.line((width-350+i, barcode_y, width-350+i, barcode_y+80), fill="#000000", width=width_factor)
+
+    # Add movie logo or watermark (placeholder text if no logo)
+    draw.text((60, 110), "DAARUNAM", font=font_small, fill="rgba(255, 204, 0, 0.5)")
 
     return ticket
-
 # ======================= STEP 2: PAYMENT ===========================
 if st.session_state.get("step") == "payment":
     info = st.session_state.get("booking")
