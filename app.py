@@ -8,22 +8,33 @@ import io
 import random
 import os
 from datetime import datetime
+import streamlit.components.v1 as components
+import urllib.parse
+import uuid
+import requests
+import logging
+
 # ---------------------------- SETTINGS ----------------------------
-UPI_ID = "9154317035@ibl"
+UPI_ID = os.getenv("UPI_ID", "9154317035@ibl")
 PAYEE_NAME = "DAARUNAM"
 AMOUNT_PER_SEAT = 50
 CSV_PATH = "booking_data.csv"
 QR_PATH = "generated_upi_qr.png"
-POSTER_PATH = "poster.jpg"  # Replace with your real poster file
+POSTER_PATH = "poster.jpg"  # Ensure this file exists in your GitHub repo
+CASHFREE_APP_ID = os.getenv("CASHFREE_APP_ID", "TEST10710960cff9577f81240f7d026806901701")
+CASHFREE_SECRET_KEY = os.getenv("CASHFREE_SECRET_KEY", "cfsk_ma_test_9ba8fd822f213f86035d392b1f89a645_c46125d7")
+CASHFREE_BASE_URL = "https://api.cashfree.com/pg/orders"  # Production endpoint for test mode
+RETURN_URL = "https://moviebookingonline.streamlit.app"  # Your live Streamlit URL
 
 # ---------------------------- INITIALIZATION ----------------------------
 st.set_page_config(page_title="DAARUNAM Booking", layout="wide", page_icon="🎬")
+logging.basicConfig(level=logging.DEBUG)
 
-# Initialize local CSV (only if not using for availability anymore)
+# Initialize local CSV
 if not os.path.exists(CSV_PATH):
     pd.DataFrame(columns=["Name", "Mobile", "Seat Nos", "UID", "Transaction ID", "Amount"]).to_csv(CSV_PATH, index=False)
 
-# ✅ Get already booked seats from Google Sheet instead of CSV
+# Get booked seats from Google Sheet
 try:
     booked_seats = get_booked_seats()
 except Exception as e:
@@ -31,10 +42,18 @@ except Exception as e:
     st.exception(e)
     booked_seats = set()
 
-# ✅ Ensure QR exists
+# Ensure QR exists
 if not os.path.exists(QR_PATH):
     qr_img = qrcode.make(f"upi://pay?pa={UPI_ID}&pn={PAYEE_NAME}&am=50&cu=INR")
     qr_img.save(QR_PATH)
+
+# Initialize session state
+if "booking" not in st.session_state:
+    st.session_state.booking = {}
+if "step" not in st.session_state:
+    st.session_state.step = "form"
+if "order_id" not in st.session_state:
+    st.session_state.order_id = None
 
 # ---------------------------- CUSTOM CSS & JS -----------------------
 st.markdown("""
@@ -206,7 +225,6 @@ document.addEventListener('DOMContentLoaded', createParticles);
 </script>
 """, unsafe_allow_html=True)
 
-
 # ---------------------------- HEADER ----------------------------
 st.markdown("<h1>🎬 DAARUNAM</h1>", unsafe_allow_html=True)
 st.markdown("<h3>Now Booking — ₹50 Per Seat</h3>", unsafe_allow_html=True)
@@ -257,13 +275,7 @@ if form_submit:
         st.session_state.step = "payment"
         st.rerun()
 
-# ---------------------------- STEP 2: PAYMENT ----------------------------
-
-
-
-
-# ✅ Correctly defined outside of if-block and at top-level indentation
-# ✅ Correctly defined outside of if-block and at top-level indentation
+# ---------------------------- TICKET GENERATION FUNCTION ----------------------------
 def generate_ticket(name, seats, amount, uid, txn_id):
     ticket = Image.new("RGB", (1400, 700), "#ffffff")
     draw = ImageDraw.Draw(ticket)
@@ -298,8 +310,8 @@ def generate_ticket(name, seats, amount, uid, txn_id):
 
     # Poster
     x = 400
-    if os.path.exists("poster.jpg"):
-        poster = Image.open("poster.jpg").resize((300, 400))
+    if os.path.exists(POSTER_PATH):
+        poster = Image.open(POSTER_PATH).resize((300, 400))
         ticket.paste(poster, (60, 180))
 
     # Details
@@ -308,7 +320,7 @@ def generate_ticket(name, seats, amount, uid, txn_id):
     draw.text((x, 300), f"Amount: ₹{amount}", font=font_text, fill="#ffffff")
     draw.text((x, 360), f"UID: {uid}", font=font_text, fill="#ffffff")
     draw.text((x, 420), f"Txn ID: {txn_id}", font=font_text, fill="#ffffff")
-    draw.text((x, 480), f"Paid To: 9154317035@ibl", font=font_text, fill="#ffffff")
+    draw.text((x, 480), f"Paid To: {UPI_ID}", font=font_text, fill="#ffffff")
     draw.text((x, 540), f"Date: 12 July 2025 • Venue: TTD Kalyana Mandapam", font=font_small, fill="#cccccc")
 
     # QR Code
@@ -317,11 +329,12 @@ def generate_ticket(name, seats, amount, uid, txn_id):
     ticket.paste(qr, (1250, 550))
 
     return ticket
-# ======================= STEP 2: PAYMENT ===========================
+
+# ---------------------------- STEP 2: PAYMENT ----------------------------
 if st.session_state.get("step") == "payment":
     info = st.session_state.get("booking")
-
     st.markdown("<div class='card'>", unsafe_allow_html=True)
+
     st.success("🎉 Booking Info Confirmed")
     st.markdown(f"""
     <p><strong>Name:</strong> {info['name']}</p>
@@ -330,54 +343,212 @@ if st.session_state.get("step") == "payment":
     <p style='color:#ffcc00;'><strong>💰 Pay:</strong> ₹{info['amount']}</p>
     """, unsafe_allow_html=True)
 
-    st.image(QR_PATH, caption=f"Scan & Pay to {UPI_ID}", width=300)
+    # Generate dynamic UPI QR code
+    qr_img = qrcode.make(f"upi://pay?pa={UPI_ID}&pn={PAYEE_NAME}&am={info['amount']}&cu=INR")
+    qr_img.save(QR_PATH)
+    st.image(QR_PATH, caption=f"Scan to Pay ₹{info['amount']} via UPI (or use Cashfree below)", width=300)
     st.markdown(f"<a href='upi://pay?pa={UPI_ID}&pn={PAYEE_NAME}&am={info['amount']}&cu=INR' style='color:#ffcc00; text-decoration:none; font-weight:bold;'>🔗 Pay via UPI App</a>", unsafe_allow_html=True)
+    st.info("After paying via UPI, submit your Transaction ID below for manual verification.")
 
-    txn_id = st.text_input("Enter UPI Transaction ID after payment", placeholder="Enter your UPI transaction ID")
-    confirm = st.button("Generate My Ticket")
+    with st.form("upi_verification"):
+        upi_txn_id = st.text_input("Enter UPI Transaction ID")
+        submit_upi = st.form_submit_button("Submit UPI Transaction ID")
+        if submit_upi and upi_txn_id:
+            st.success(f"UPI Transaction ID {upi_txn_id} submitted. We will verify and send your ticket.")
+            try:
+                if not os.path.exists(CSV_PATH):
+                    booked_df = pd.DataFrame(columns=["Name", "Mobile", "Seat Nos", "UID", "Transaction ID", "Amount"])
+                else:
+                    booked_df = pd.read_csv(CSV_PATH)
+                uid = f"DRN{random.randint(100, 999)}"
+                seat_str = ", ".join(info['seats'])
+                new_row = pd.DataFrame([[info['name'], info['mobile'], seat_str, uid, upi_txn_id, info['amount']]],
+                                       columns=["Name", "Mobile", "Seat Nos", "UID", "Transaction ID", "Amount"])
+                updated_df = pd.concat([booked_df, new_row], ignore_index=True)
+                updated_df.to_csv(CSV_PATH, index=False)
+                append_booking_to_gsheet(info['name'], info['mobile'], seat_str, uid, upi_txn_id, info['amount'])
+                ticket_img = generate_ticket(info['name'], info['seats'], info['amount'], uid, upi_txn_id)
+                buffer = io.BytesIO()
+                ticket_img.save(buffer, format="PNG")
+                buffer.seek(0)
+                st.image(ticket_img, caption="🎫 Your Ticket — Show at Entry (Pending UPI Verification)")
+                st.download_button("📥 Download Ticket", buffer, file_name=f"ticket_{uid}.png", mime="image/png")
+                st.success(f"✅ Booking Submitted! Your UID is: `{uid}`. Await UPI verification.")
+                st.session_state.clear()
+                st.rerun()
+            except Exception as e:
+                st.error(f"❌ Failed to process UPI booking: {str(e)}")
+                logging.error(f"UPI booking error: {e}")
 
-    if confirm:
-        if not txn_id.strip():
-            st.error("Please enter your UPI Transaction ID.")
-        else:
+    # Cashfree Payment Integration
+    order_id = f"DAARUNAM_{uuid.uuid4().hex[:8]}"
+    return_url = (
+        f"{RETURN_URL}/"
+        f"?payment=success&oid={order_id}"
+        f"&name={urllib.parse.quote_plus(info['name'])}"
+        f"&mobile={info['mobile']}"
+        f"&seats={','.join(info['seats'])}"
+        f"&amount={info['amount']}"
+        f"&cf_id={order_id}"
+    )
+
+    payload = {
+        "customer_details": {
+            "customer_id": info['mobile'],
+            "customer_email": "test@example.com",
+            "customer_phone": info['mobile']
+        },
+        "order_amount": float(info['amount']),
+        "order_currency": "INR",
+        "order_id": order_id,
+        "order_meta": {
+            "return_url": return_url
+        }
+    }
+
+    headers = {
+        "x-api-version": "2023-08-01",
+        "Content-Type": "application/json",
+        "x-client-id": CASHFREE_APP_ID,
+        "x-client-secret": CASHFREE_SECRET_KEY
+    }
+
+    if st.button("💳 Pay via Cashfree"):
+        logging.debug(f"Sending payload: {payload}")
+        logging.debug(f"Headers: {headers}")
+        try:
+            response = requests.post(CASHFREE_BASE_URL, json=payload, headers=headers)
+            logging.debug(f"Response status: {response.status_code}, Response body: {response.text}")
+            if response.status_code == 200:
+                payment_link = response.json().get("payment_link")
+                st.markdown(f"[👉 Click to Pay ₹{info['amount']}]({payment_link})", unsafe_allow_html=True)
+                st.session_state.order_id = order_id
+                st.info(f"After completing the payment, you will be redirected to: {return_url}")
+                st.info("Ensure https://moviebookingonline.streamlit.app is whitelisted in the Cashfree dashboard (Developers > Webhooks).")
+            elif response.status_code == 400 and response.json().get("code") == "order_meta.return_url_invalid":
+                st.error("❌ Invalid return URL. Please ensure the return URL is HTTPS and whitelisted in Cashfree.")
+                st.json(response.json())
+                st.info("Whitelist https://moviebookingonline.streamlit.app in the Cashfree dashboard under Developers > Webhooks.")
+            elif response.status_code == 401:
+                st.error("❌ Authentication failed with Cashfree. Please check your API credentials in Streamlit secrets.")
+                st.json(response.json())
+                st.info("Ensure CASHFREE_APP_ID and CASHFREE_SECRET_KEY are valid test credentials in Streamlit Cloud secrets.")
+            else:
+                st.error(f"❌ Failed to initiate payment with Cashfree. Status: {response.status_code}")
+                st.json(response.json())
+        except Exception as e:
+            st.error(f"❌ Payment request failed: {str(e)}")
+            logging.error(f"Payment error: {e}")
+
+    st.markdown("</div>", unsafe_allow_html=True)
+
+# ---------------------------- POST-PAYMENT REDIRECT HANDLING ----------------------------
+query_params = st.query_params
+logging.debug(f"Received query params: {query_params}")
+st.markdown(f"<p style='color:#cccccc;'>Debug: Received query params: {query_params}</p>", unsafe_allow_html=True)
+
+if query_params.get("payment") == "success" and "oid" in query_params:
+    logging.debug("Post-payment logic triggered")
+    # Reconstruct booking details
+    order_id = query_params["oid"]
+    name = urllib.parse.unquote_plus(query_params.get("name", "Guest"))
+    mobile = query_params.get("mobile", "")
+    seats = query_params.get("seats", "").split(",")
+    amount = int(query_params.get("amount", 0))
+
+    # Verify seats are still available
+    try:
+        booked_seats = get_booked_seats()
+        if any(seat in booked_seats for seat in seats):
+            st.error("One or more selected seats are already booked. Please choose different seats.")
+            st.session_state.clear()
+            st.rerun()
+    except Exception as e:
+        st.error(f"❌ Failed to verify seat availability: {str(e)}")
+        logging.error(f"Seat verification error: {e}")
+        st.rerun()
+
+    # Verify payment status
+    verify_url = f"{CASHFREE_BASE_URL}/{order_id}"
+    headers = {
+        "x-api-version": "2023-08-01",
+        "Content-Type": "application/json",
+        "x-client-id": CASHFREE_APP_ID,
+        "x-client-secret": CASHFREE_SECRET_KEY
+    }
+    try:
+        response = requests.get(verify_url, headers=headers)
+        logging.debug(f"Verification response: {response.status_code}, {response.text}")
+        if response.status_code == 200 and response.json().get("order_status") == "PAID":
             uid = f"DRN{random.randint(100, 999)}"
-            name = info['name']
-            mobile = info['mobile']
-            seat_str = ", ".join(info['seats'])
+            txn_id = order_id
+            seat_str = ", ".join(seats)
 
-            # ✅ Safely reload CSV here to avoid NameError
+            # Save to CSV
             if not os.path.exists(CSV_PATH):
                 booked_df = pd.DataFrame(columns=["Name", "Mobile", "Seat Nos", "UID", "Transaction ID", "Amount"])
             else:
                 booked_df = pd.read_csv(CSV_PATH)
 
-            # Save to CSV
-            new_row = pd.DataFrame([[name, mobile, seat_str, uid, txn_id.strip(), info['amount']]],
+            new_row = pd.DataFrame([[name, mobile, seat_str, uid, txn_id, amount]],
                                    columns=["Name", "Mobile", "Seat Nos", "UID", "Transaction ID", "Amount"])
             updated_df = pd.concat([booked_df, new_row], ignore_index=True)
             updated_df.to_csv(CSV_PATH, index=False)
 
             # Save to Google Sheet
-            append_booking_to_gsheet(name, mobile, seat_str, uid, txn_id.strip(), info['amount'])
+            try:
+                append_booking_to_gsheet(name, mobile, seat_str, uid, txn_id, amount)
+            except Exception as e:
+                st.error(f"❌ Failed to save to Google Sheet: {str(e)}")
+                logging.error(f"Google Sheet error: {e}")
 
-            # Generate Ticket
-            ticket_img = generate_ticket(name, info['seats'], info['amount'], uid, txn_id)
+            # Generate ticket
+            try:
+                ticket_img = generate_ticket(name, seats, amount, uid, txn_id)
+                buffer = io.BytesIO()
+                ticket_img.save(buffer, format="PNG")
+                buffer.seek(0)
 
-            buffer = io.BytesIO()
-            ticket_img.save(buffer, format="PNG")
-            buffer.seek(0)
-
-            st.image(ticket_img, caption="🎫 Your Ticket — Show at Entry")
-            
-            st.download_button("📥 Download Ticket", buffer, file_name=f"ticket_{uid}.png", mime="image/png")
-
-            st.success(f"✅ Booking Confirmed! Your UID is: `{uid}`")
-            st.info("Please save this ticket or UID for entry verification.")
-            st.session_state.clear()
-
-    st.markdown("</div>", unsafe_allow_html=True)
-
-
+                st.image(ticket_img, caption="🎫 Your Ticket — Show at Entry")
+                st.download_button("📥 Download Ticket", buffer, file_name=f"ticket_{uid}.png", mime="image/png")
+                st.success(f"✅ Booking Confirmed! Your UID is: `{uid}`")
+                st.info("Please save this ticket or UID for entry verification.")
+                st.session_state.clear()
+            except Exception as e:
+                st.error(f"❌ Failed to generate ticket: {str(e)}")
+                logging.error(f"Ticket generation error: {e}")
+        elif response.status_code == 401:
+            st.error("❌ Authentication failed during payment verification. Please check your API credentials in Streamlit secrets.")
+            st.json(response.json())
+            st.info("Ensure CASHFREE_APP_ID and CASHFREE_SECRET_KEY are valid test credentials in Streamlit Cloud secrets.")
+        else:
+            st.error("❌ Payment not completed or failed. Please complete the payment or try again.")
+            if response.status_code == 200:
+                st.json(response.json())
+            else:
+                st.error(f"Verification request failed with status: {response.status_code}")
+    except Exception as e:
+        st.error(f"❌ Payment verification failed: {str(e)}")
+        logging.error(f"Verification error: {e}")
+else:
+    logging.debug(f"Post-payment logic not triggered. Query params: {query_params}")
+    # Fallback for missing query parameters
+    if st.session_state.get("order_id"):
+        st.warning("⚠️ Redirect query parameters missing. Please enter your Order ID to verify payment.")
+        with st.form("order_id_fallback"):
+            manual_order_id = st.text_input("Enter Cashfree Order ID (e.g., DAARUNAM_1b5c6535)")
+            submit_order_id = st.form_submit_button("Verify Payment")
+            if submit_order_id and manual_order_id:
+                # Reconstruct query params manually
+                query_params["payment"] = "success"
+                query_params["oid"] = manual_order_id
+                query_params["name"] = info.get("name", "Guest") if st.session_state.get("booking") else "Guest"
+                query_params["mobile"] = info.get("mobile", "") if st.session_state.get("booking") else ""
+                query_params["seats"] = ",".join(info.get("seats", [])) if st.session_state.get("booking") else ""
+                query_params["amount"] = str(info.get("amount", 0)) if st.session_state.get("booking") else "0"
+                query_params["cf_id"] = manual_order_id
+                st.session_state.step = "payment"
+                st.rerun()
 
 # ---------------------------- FOOTER ----------------------------
 st.divider()
