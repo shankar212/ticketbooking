@@ -330,31 +330,22 @@ if st.session_state.get("step") == "payment":
     <p style='color:#ffcc00;'><strong>💰 Pay:</strong> ₹{info['amount']}</p>
     """, unsafe_allow_html=True)
 
-    # Show QR Code and UPI ID
-    st.image(QR_PATH, caption=f"📸 Scan to Pay to {UPI_ID}", width=300)
-    st.code(UPI_ID, language="text")
-
-    # Optional UPI App link (may not work everywhere)
-    st.markdown(f"""
-    <p><strong>Or try:</strong></p>
-    <a href='upi://pay?pa={UPI_ID}&pn={PAYEE_NAME}&am={info['amount']}&cu=INR' target='_blank'
-    style='color:#ffcc00; text-decoration:none; font-weight:bold;'>🔗 Pay via UPI App Link</a>
-    <p style="color:#aaa; font-size:0.9rem;"><em>If link doesn't work, please use the QR code above.</em></p>
-    """, unsafe_allow_html=True)
+    st.image(QR_PATH, caption=f"Scan & Pay to {UPI_ID}", width=300)
+    st.markdown(f"<a href='upi://pay?pa={UPI_ID}&pn={PAYEE_NAME}&am={info['amount']}&cu=INR' style='color:#ffcc00; text-decoration:none; font-weight:bold;'>🔗 Pay via UPI App</a>", unsafe_allow_html=True)
 
     txn_id = st.text_input("Enter UPI Transaction ID after payment", placeholder="Enter your UPI transaction ID")
-    confirm = st.button("🎟️ Generate My Ticket")
+    confirm = st.button("Generate My Ticket")
 
     if confirm:
         if not txn_id.strip():
-            st.error("❌ Please enter your UPI Transaction ID.")
+            st.error("Please enter your UPI Transaction ID.")
         else:
             uid = f"DRN{random.randint(100, 999)}"
             name = info['name']
             mobile = info['mobile']
             seat_str = ", ".join(info['seats'])
 
-            # Safely reload CSV
+            # ✅ Safely reload CSV here to avoid NameError
             if not os.path.exists(CSV_PATH):
                 booked_df = pd.DataFrame(columns=["Name", "Mobile", "Seat Nos", "UID", "Transaction ID", "Amount"])
             else:
@@ -369,19 +360,19 @@ if st.session_state.get("step") == "payment":
             # Save to Google Sheet
             append_booking_to_gsheet(name, mobile, seat_str, uid, txn_id.strip(), info['amount'])
 
-            # Generate ticket
-            ticket_img = generate_ticket(name, info['seats'], info['amount'], uid, txn_id.strip())
+            # Generate Ticket
+            ticket_img = generate_ticket(name, info['seats'], info['amount'], uid, txn_id)
+
             buffer = io.BytesIO()
             ticket_img.save(buffer, format="PNG")
             buffer.seek(0)
 
-            # Show ticket
             st.image(ticket_img, caption="🎫 Your Ticket — Show at Entry")
+            
             st.download_button("📥 Download Ticket", buffer, file_name=f"ticket_{uid}.png", mime="image/png")
+
             st.success(f"✅ Booking Confirmed! Your UID is: `{uid}`")
             st.info("Please save this ticket or UID for entry verification.")
-
-            # Clear session
             st.session_state.clear()
 
     st.markdown("</div>", unsafe_allow_html=True)
