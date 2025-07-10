@@ -331,7 +331,6 @@ if st.session_state.get("step") == "payment":
     """, unsafe_allow_html=True)
 
     st.image(QR_PATH, caption=f"Scan & Pay to {UPI_ID}", width=300)
-    st.markdown(f"<a href='upi://pay?pa={UPI_ID}&pn={PAYEE_NAME}&am={info['amount']}&cu=INR' style='color:#ffcc00; text-decoration:none; font-weight:bold;'>🔗 Pay via UPI App</a>", unsafe_allow_html=True)
 
     txn_id = st.text_input("Enter UPI Transaction ID after payment", placeholder="Enter your UPI transaction ID")
     confirm = st.button("Generate My Ticket")
