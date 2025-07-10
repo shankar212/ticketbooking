@@ -21,8 +21,8 @@ AMOUNT_PER_SEAT = 50
 CSV_PATH = "booking_data.csv"
 QR_PATH = "generated_upi_qr.png"
 POSTER_PATH = "poster.jpg"  # Ensure this file exists in your GitHub repo
-CASHFREE_APP_ID = os.getenv("CASHFREE_APP_ID", "TEST10710960cff9577f81240f7d026806901701")
-CASHFREE_SECRET_KEY = os.getenv("CASHFREE_SECRET_KEY", "cfsk_ma_test_9ba8fd822f213f86035d392b1f89a645_c46125d7")
+CASHFREE_APP_ID = os.getenv("TEST10710960cff9577f81240f7d026806901701")
+CASHFREE_SECRET_KEY = os.getenv("cfsk_ma_test_9ba8fd822f213f86035d392b1f89a645_c46125d7")
 CASHFREE_BASE_URL = "https://api.cashfree.com/pg/orders"  # Production endpoint for test mode
 RETURN_URL = "https://moviebookingonline.streamlit.app"  # Your live Streamlit URL
 
