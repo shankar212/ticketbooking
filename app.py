@@ -383,7 +383,7 @@ if st.session_state.get("step") == "payment":
     # Cashfree Payment Integration
     order_id = f"DAARUNAM_{uuid.uuid4().hex[:8]}"
     return_url = (
-        f"{https://moviebookingonline.streamlit.app/}/"  # Use https://moviebookingonline.streamlit.app or ngrok HTTPS URL
+        f"https://moviebookingonline.streamlit.app/"  # Use https://moviebookingonline.streamlit.app or ngrok HTTPS URL
         f"?payment=success&oid={order_id}"
         f"&name={urllib.parse.quote_plus(info['name'])}"
         f"&mobile={info['mobile']}"
