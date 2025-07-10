@@ -5,3 +5,4 @@ Pillow
 filelock
 gspread
 oauth2client
+cashfree_pg
