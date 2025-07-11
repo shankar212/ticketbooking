@@ -382,4 +382,4 @@ if st.session_state.get("step") == "payment":
 st.divider()
 st.markdown("<p style='text-align:center; color:#cccccc; font-size:14px;'>© 2025 DAARUNAM Movie | UPI Verification Required at Entry</p>", unsafe_allow_html=True)
 with st.expander("📜 Terms & Conditions + Refund Policy"):
-    st.markdown(open("terms_and_refund.md").read(), unsafe_allow_html=True)
+    st.markdown(open("term_and_refund_policy.md").read(), unsafe_allow_html=True)
