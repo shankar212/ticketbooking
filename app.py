@@ -380,6 +380,28 @@ if st.session_state.get("step") == "payment":
 
 # ---------------------------- FOOTER ----------------------------
 st.divider()
-st.markdown("<p style='text-align:center; color:#cccccc; font-size:14px;'>© 2025 DAARUNAM Movie | UPI Verification Required at Entry</p>", unsafe_allow_html=True)
+with st.expander("📬 Contact Us"):
+    try:
+        with open("contactus.md", "r", encoding="utf-8") as f:
+            st.markdown(f.read())
+    except FileNotFoundError:
+        st.warning("📄 'contactus.md' file not found.")
 with st.expander("📜 Terms & Conditions + Refund Policy"):
-    st.markdown(open("term_and_refund_policy.md").read(), unsafe_allow_html=True)
+    try:
+        with open("term_and_refund_policy.md", "r", encoding="utf-8") as f:
+            st.markdown(f.read())
+    except FileNotFoundError:
+        st.warning("📄 'term_and_refund_policy.md' file not found.")
+
+# Contact Us Expander
+
+st.markdown(
+    """
+    <p style='text-align:center; color:#cccccc; font-size:14px;'>
+        © 2025 DAARUNAM Movie | UPI Verification Required at Entry<br>
+        Designed & Developed by <b>Rathod Shanker</b>
+    </p>
+    """,
+    unsafe_allow_html=True
+)
+
