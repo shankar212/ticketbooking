@@ -8,25 +8,33 @@ import io
 import random
 import os
 from datetime import datetime
-import streamlit.components.v1 as components
-import urllib.parse
-import uuid
-import requests
-import logging
-import urllib.parse
-
 # ---------------------------- SETTINGS ----------------------------
-UPI_ID = os.getenv("UPI_ID", "9154317035@ibl")
+UPI_ID = "9154317035@ibl"
 PAYEE_NAME = "DAARUNAM"
 AMOUNT_PER_SEAT = 50
 CSV_PATH = "booking_data.csv"
 QR_PATH = "generated_upi_qr.png"
 POSTER_PATH = "poster.jpg"  # Replace with your real poster file
-CASHFREE_APP_ID = "TEST10710960cff9577f81240f7d026806901701"
-CASHFREE_SECRET_KEY = "cfsk_ma_test_9ba8fd822f213f86035d392b1f89a645_c46125d7"
 
-CASHFREE_BASE_URL = "https://sandbox.cashfree.com/pg/links"  # Production endpoint for test mode with test credentials
-RETURN_BASE_URL = "https://moviebookingonline.streamlit.app/"
+# ---------------------------- INITIALIZATION ----------------------------
+st.set_page_config(page_title="DAARUNAM Booking", layout="wide", page_icon="🎬")
+
+# Initialize local CSV (only if not using for availability anymore)
+if not os.path.exists(CSV_PATH):
+    pd.DataFrame(columns=["Name", "Mobile", "Seat Nos", "UID", "Transaction ID", "Amount"]).to_csv(CSV_PATH, index=False)
+
+# ✅ Get already booked seats from Google Sheet instead of CSV
+try:
+    booked_seats = get_booked_seats()
+except Exception as e:
+    st.error("❌ Failed to load booked seats from Google Sheet.")
+    st.exception(e)
+    booked_seats = set()
+
+# ✅ Ensure QR exists
+if not os.path.exists(QR_PATH):
+    qr_img = qrcode.make(f"upi://pay?pa={UPI_ID}&pn={PAYEE_NAME}&am=50&cu=INR")
+    qr_img.save(QR_PATH)
 
 # ---------------------------- CUSTOM CSS & JS -----------------------
 st.markdown("""
@@ -255,6 +263,7 @@ if form_submit:
 
 
 # ✅ Correctly defined outside of if-block and at top-level indentation
+# ✅ Correctly defined outside of if-block and at top-level indentation
 def generate_ticket(name, seats, amount, uid, txn_id):
     ticket = Image.new("RGB", (1400, 700), "#ffffff")
     draw = ImageDraw.Draw(ticket)
@@ -299,7 +308,7 @@ def generate_ticket(name, seats, amount, uid, txn_id):
     draw.text((x, 300), f"Amount: ₹{amount}", font=font_text, fill="#ffffff")
     draw.text((x, 360), f"UID: {uid}", font=font_text, fill="#ffffff")
     draw.text((x, 420), f"Txn ID: {txn_id}", font=font_text, fill="#ffffff")
-    draw.text((x, 480), f"Paid To: {UPI_ID}", font=font_text, fill="#ffffff")
+    draw.text((x, 480), f"Paid To: 9154317035@ibl", font=font_text, fill="#ffffff")
     draw.text((x, 540), f"Date: 12 July 2025 • Venue: TTD Kalyana Mandapam", font=font_small, fill="#cccccc")
 
     # QR Code
@@ -308,179 +317,66 @@ def generate_ticket(name, seats, amount, uid, txn_id):
     ticket.paste(qr, (1250, 550))
 
     return ticket
-
-# ---------------------------- STEP 2: PAYMENT ----------------------------
+# ======================= STEP 2: PAYMENT ===========================
 if st.session_state.get("step") == "payment":
     info = st.session_state.get("booking")
 
-    if st.button("💳 Pay via Cashfree"):
-        order_id = f"DAARUNAM_{uuid.uuid4().hex[:8]}"
-        st.session_state.order_id = order_id
+    st.markdown("<div class='card'>", unsafe_allow_html=True)
+    st.success("🎉 Booking Info Confirmed")
+    st.markdown(f"""
+    <p><strong>Name:</strong> {info['name']}</p>
+    <p><strong>Mobile:</strong> {info['mobile']}</p>
+    <p><strong>Seats:</strong> {', '.join(info['seats'])}</p>
+    <p style='color:#ffcc00;'><strong>💰 Pay:</strong> ₹{info['amount']}</p>
+    """, unsafe_allow_html=True)
 
-        return_url = (
-            f"{RETURN_BASE_URL}"
-            f"?payment=success&oid={order_id}"
-            f"&name={urllib.parse.quote_plus(info['name'])}"
-            f"&mobile={info['mobile']}"
-            f"&seats={','.join(info['seats'])}"
-            f"&amount={info['amount']}"
-            f"&cf_id={order_id}"
-        )
+    st.image(QR_PATH, caption=f"Scan & Pay to {UPI_ID}", width=300)
 
-        payload = {
-            "link_id": order_id,
-            "link_amount": float(info['amount']),
-            "link_currency": "INR",
-            "link_purpose": "Movie Ticket Booking",
-            "customer_details": {
-                "customer_email": "test@example.com",
-                "customer_phone": info['mobile'],
-                "customer_name": info['name'],
-                "country_code": "+91"
-            },
-            "link_meta": {
-                "return_url": return_url
-            },
-            "link_notify": {
-                "send_sms": True,
-                "send_email": False
-            }
-        }
+    txn_id = st.text_input("Enter UPI Transaction ID after payment", placeholder="Enter your UPI transaction ID")
+    confirm = st.button("Generate My Ticket")
 
-        headers = {
-            "x-api-version": "2023-08-01",
-            "Content-Type": "application/json",
-            "x-client-id": CASHFREE_APP_ID,
-            "x-client-secret": CASHFREE_SECRET_KEY
-        }
-
-        try:
-            response = requests.post("https://sandbox.cashfree.com/pg/links", json=payload, headers=headers)
-            if response.status_code == 200:
-                data = response.json()
-                payment_url = data.get("link_url")
-
-                st.markdown(f"[👉 Click to Pay ₹{info['amount']}]({payment_url})", unsafe_allow_html=True)
-                st.success("✅ Payment link created successfully.")
-                st.info("Complete the payment and you'll be redirected back automatically.")
-            else:
-                st.error(f"❌ Failed to create payment link. Status: {response.status_code}")
-                try:
-                    st.json(response.json())
-                except:
-                    st.write(response.text)
-        except Exception as e:
-            st.error(f"❌ Error creating payment link: {str(e)}")
-
-
-
-
-# ---------------------------- POST-PAYMENT REDIRECT HANDLING ----------------------------
-
-
-query_params = st.query_params or st.session_state.get("manual_query_params", {})
-logging.debug(f"Received query params: {query_params}")
-st.markdown(f"<p style='color:#cccccc;'>Debug: Received query params: {query_params}</p>", unsafe_allow_html=True)
-
-if query_params.get("payment") == "success" and "oid" in query_params:
-    order_id = query_params.get("oid")  # This is your custom link_id (DAARUNAM_xxxx)
-    name = urllib.parse.unquote_plus(query_params.get("name", "Guest"))
-    mobile = query_params.get("mobile", "")
-    seats = query_params.get("seats", "").split(",")
-    amount = int(query_params.get("amount", 0))
-
-    # ✅ Check if any seat is already booked
-    try:
-        booked_seats = get_booked_seats()
-        if any(seat in booked_seats for seat in seats):
-            st.error("❌ One or more selected seats are already booked.")
-            st.session_state.clear()
-            st.rerun()
-    except Exception as e:
-        st.error(f"❌ Failed to verify seat availability: {str(e)}")
-        st.rerun()
-
-    # ✅ Cashfree Link Payment Verification
-    verify_url = f"https://sandbox.cashfree.com/pg/links/{order_id}"
-    headers = {
-        "x-api-version": "2023-08-01",
-        "Content-Type": "application/json",
-        "x-client-id": CASHFREE_APP_ID,
-        "x-client-secret": CASHFREE_SECRET_KEY
-    }
-
-    try:
-        response = requests.get(verify_url, headers=headers)
-        res_json = response.json()
-
-        if response.status_code == 200 and res_json.get("link_status") == "PAID":
+    if confirm:
+        if not txn_id.strip():
+            st.error("Please enter your UPI Transaction ID.")
+        else:
             uid = f"DRN{random.randint(100, 999)}"
-            txn_id = order_id
-            seat_str = ", ".join(seats)
+            name = info['name']
+            mobile = info['mobile']
+            seat_str = ", ".join(info['seats'])
 
-            # ✅ Save booking to CSV
+            # ✅ Safely reload CSV here to avoid NameError
             if not os.path.exists(CSV_PATH):
                 booked_df = pd.DataFrame(columns=["Name", "Mobile", "Seat Nos", "UID", "Transaction ID", "Amount"])
             else:
                 booked_df = pd.read_csv(CSV_PATH)
 
-            new_row = pd.DataFrame([[name, mobile, seat_str, uid, txn_id, amount]],
+            # Save to CSV
+            new_row = pd.DataFrame([[name, mobile, seat_str, uid, txn_id.strip(), info['amount']]],
                                    columns=["Name", "Mobile", "Seat Nos", "UID", "Transaction ID", "Amount"])
             updated_df = pd.concat([booked_df, new_row], ignore_index=True)
             updated_df.to_csv(CSV_PATH, index=False)
 
-            # ✅ Save to Google Sheet
-            try:
-                append_booking_to_gsheet(name, mobile, seat_str, uid, txn_id, amount)
-            except Exception as e:
-                st.error(f"❌ Failed to save to Google Sheet: {str(e)}")
-                logging.error(f"Google Sheets error: {e}")
+            # Save to Google Sheet
+            append_booking_to_gsheet(name, mobile, seat_str, uid, txn_id.strip(), info['amount'])
 
-            # ✅ Generate Ticket
-            try:
-                ticket_img = generate_ticket(name, seats, amount, uid, txn_id)
-                buffer = io.BytesIO()
-                ticket_img.save(buffer, format="PNG")
-                buffer.seek(0)
+            # Generate Ticket
+            ticket_img = generate_ticket(name, info['seats'], info['amount'], uid, txn_id)
 
-                st.image(ticket_img, caption="🎫 Your Ticket — Show at Entry")
-                st.download_button("📥 Download Ticket", buffer, file_name=f"ticket_{uid}.png", mime="image/png")
-                st.success(f"✅ Booking Confirmed! Your UID is: `{uid}`")
-                st.info("Please save this ticket or UID for entry verification.")
-                st.session_state.clear()
-            except Exception as e:
-                st.error(f"❌ Failed to generate ticket: {str(e)}")
-                logging.error(f"Ticket generation error: {e}")
-        else:
-            st.error("❌ Payment not completed or failed. Please try again.")
-            if response.status_code == 200:
-                st.json(res_json)
-            else:
-                st.error(f"Verification failed. Status: {response.status_code}")
+            buffer = io.BytesIO()
+            ticket_img.save(buffer, format="PNG")
+            buffer.seek(0)
 
-    except Exception as e:
-        st.error(f"❌ Payment verification error: {str(e)}")
-        logging.error(f"Verification exception: {e}")
+            st.image(ticket_img, caption="🎫 Your Ticket — Show at Entry")
+            
+            st.download_button("📥 Download Ticket", buffer, file_name=f"ticket_{uid}.png", mime="image/png")
 
-# 🔁 Manual fallback if query params are missing
-else:
-    if st.session_state.get("order_id"):
-        st.warning("⚠️ Redirect parameters missing. Please enter your Order ID to verify payment.")
-        with st.form("order_id_fallback"):
-            manual_order_id = st.text_input("Enter Cashfree Order ID (e.g., DAARUNAM_xxxxxxxx)")
-            submit = st.form_submit_button("Verify Payment")
-            if submit and manual_order_id:
-                booking = st.session_state.get("booking", {})
-                st.session_state.manual_query_params = {
-                    "payment": "success",
-                    "oid": manual_order_id,
-                    "name": booking.get("name", "Guest"),
-                    "mobile": booking.get("mobile", ""),
-                    "seats": ",".join(booking.get("seats", [])),
-                    "amount": str(booking.get("amount", 0)),
-                    "cf_id": manual_order_id
-                }
-                st.rerun()
+            st.success(f"✅ Booking Confirmed! Your UID is: `{uid}`")
+            st.info("Please save this ticket or UID for entry verification.")
+            st.session_state.clear()
+
+    st.markdown("</div>", unsafe_allow_html=True)
+
+
 
 # ---------------------------- FOOTER ----------------------------
 st.divider()
@@ -508,4 +404,3 @@ st.markdown(
     """,
     unsafe_allow_html=True
 )
-
