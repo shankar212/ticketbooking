@@ -71,7 +71,6 @@ pip install streamlit pandas pillow qrcode gspread oauth2client
 ├── booking_data.csv          # Local fallback for bookings
 ├── generated_upi_qr.png      # Static UPI QR code
 ├── requirements.txt
-├── .env                      # Contains Cashfree credentials (not committed)
 ├── term_and_refund_policy.md # T&C and refund info
 ├── contactus.md              # Contact us info
 └── README.md                 # This file
