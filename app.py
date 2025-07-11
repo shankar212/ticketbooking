@@ -25,7 +25,7 @@ POSTER_PATH = "poster.jpg"  # Replace with your real poster file
 CASHFREE_APP_ID = "TEST10710960cff9577f81240f7d026806901701"
 CASHFREE_SECRET_KEY = "cfsk_ma_test_9ba8fd822f213f86035d392b1f89a645_c46125d7"
 
-CASHFREE_BASE_URL = "https://sandbox.cashfree.com/pg/linkss"  # Production endpoint for test mode with test credentials
+CASHFREE_BASE_URL = "https://sandbox.cashfree.com/pg/links"  # Production endpoint for test mode with test credentials
 RETURN_BASE_URL = "https://moviebookingonline.streamlit.app/"
 
 # ---------------------------- CUSTOM CSS & JS -----------------------
