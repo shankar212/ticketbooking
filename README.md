@@ -1,7 +1,6 @@
 # 🎬 DAARUNAM Booking App
 
-A fully functional **movie ticket booking system** built using **Streamlit**, integrated with **Google Sheets** for real-time booking data, and generates a **professional ticket image** with QR code for UID verification.
-
+A fully functional **movie ticket booking system** built using **Streamlit**, integrated with **Cashfree Payments** and **Google Sheets** for real-time booking data. Generates a **professional ticket image** with QR code for UID verification and entry.
 ---
 
 ## 📸 Preview
@@ -15,27 +14,41 @@ A fully functional **movie ticket booking system** built using **Streamlit**, in
 ## 🚀 Features
 
 - 🎟️ Book multiple seats (up to 10)
-- 📲 UPI payment support with manual Transaction ID
+- 💳 **Integrated Cashfree Hosted Checkout Payment Gateway**
+  - Secure hosted payments via UPI, Card, NetBanking, Wallets
+  - Auto-verification post-payment and redirect to ticket
+- 📲 Manual UPI payment support (for fallback mode)
 - 🧾 Generates downloadable ticket with:
   - Poster
   - Customer & transaction details
   - Unique UID
   - Scannable QR code
 - ☁️ Booking data synced with **Google Sheets**
-- 📊 Admin-safe: avoids double booking by checking real-time seat availability
+- 🔐 Prevents double booking with real-time seat availability check
 - 🎨 Stunning animated UI using custom Streamlit CSS
-- **Live at :** https://moviebookingonline.streamlit.app/
+- 🌐 **Live at:** [moviebookingonline.streamlit.app](https://moviebookingonline.streamlit.app)
 ---
 
 ## 🛠️ Tech Stack
 
-- **Frontend**: Streamlit + HTML/CSS (embedded)
+- **Frontend**: Streamlit + HTML/CSS
 - **Backend**: Python
-- **Storage**: Google Sheets API (via `gsheets.py`)
+- **Payments**: Cashfree PG Orders API (Hosted Checkout)
+- **Storage**: Google Sheets (via `gsheets.py`)
 - **Image Generation**: Pillow (PIL), Qrcode
-- **File**: CSV for local booking fallback
+- **File-based Storage**: CSV fallback
 
 ---
+## 💳 Cashfree Integration
+
+This app uses the [Cashfree Payment Gateway](https://www.cashfree.com/) (PG Orders API with Hosted Checkout) for secure payment processing.
+
+### ✅ Features:
+- Secure, PCI-compliant hosted payment page
+- Payment verification using `/pg/app/orders/{order_id}` endpoint
+- Seamless redirect back to app on success
+
+> **Note:** You'll need your own **production API keys** from Cashfree and must be KYC-verified to 
 
 ## 🧰 Requirements
 
@@ -52,13 +65,16 @@ pip install streamlit pandas pillow qrcode gspread oauth2client
 
 ```
 📁 DAARUNAM-Booking/
-├── app.py                 # Main Streamlit app
-├── gsheets.py            # Google Sheets helper functions
-├── poster.jpg            # Movie poster used on tickets
-├── booking_data.csv      # Local fallback for bookings
-├── generated_upi_qr.png  # Static UPI QR code
-├── README.md             # This file
-└── requirements.txt
+├── app.py                     # Main Streamlit app
+├── gsheets.py                # Google Sheets helper functions
+├── poster.jpg                # Movie poster used on tickets
+├── booking_data.csv          # Local fallback for bookings
+├── generated_upi_qr.png      # Static UPI QR code
+├── requirements.txt
+├── .env                      # Contains Cashfree credentials (not committed)
+├── term_and_refund_policy.md # T&C and refund info
+├── contactus.md              # Contact us info
+└── README.md                 # This file
 ```
 
 ---
