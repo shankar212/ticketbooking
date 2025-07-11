@@ -123,6 +123,8 @@ streamlit run app.py
 |--------------|---------------|
 | ![](https://github.com/user-attachments/assets/6516e9e6-d148-4f4b-b35b-ec36a9e0ba4c) | ![](https://github.com/user-attachments/assets/f54b45d5-e0ed-4d6a-9ab4-0068680f331a) |
 
+##Gsheet Screenshot
+<img width="684" height="441" alt="image" src="https://github.com/user-attachments/assets/94555f76-644a-4282-ae80-deed3816d978" />
 
 ---
 
